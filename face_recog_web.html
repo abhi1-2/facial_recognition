@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Amatic+SC">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+	<title></title>
+	<style>
+body, html {height: 100%}
+mbody,h1,h2,h3,h4,h5,h6 {font-family: "Amatic SC", sans-serif;
+font-size: 40px;}
+</style>
+<style>
+.rect {
+    border: 5px solid #a64ceb;
+    left: -1000px;
+    position: absolute;
+    top: -1000px;
+  }
+#container {
+    margin: 0px auto;
+    width: 500px;
+    height: 375px;
+    border: 10px #333 solid;
+}
+#videoElement {
+    width: 500px;
+    height: 375px;
+    background-color: #666;
+}
+
+</style>
+<script src="tracking.js-master/build/tracking-min.js"></script>
+  <script src="tracking.js-master/build/data/face-min.js"></script>
+  <script src="tracking.js-master/build/data/eye-min.js"></script>
+  <script src="tracking.js-master/build/data/mouth-min.js"></script>
+ 
+  <script src="tracking.js-master/src/alignment/training/Landmarks.js"></script>
+  <script src="tracking.js-master/src/alignment/training/Regressor.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+</head>
+
+<body>
+<nav class="navbar navbar-inverse" style="z-index: 2;opacity: 0.7;">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#"><img src="/codespace/icon_attendance.png" style="height: 110%;"></a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="#">Home</a></li>
+      <li><a href="#"></a></li>
+      <li><a href="#"></a></li>
+      <li><a href="#">Contact Us</a></li>
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a id="login" href="#myModal"><span class="glyphicon glyphicon-user " data-toggle="modal" data-target="#myModal">Login</span> </a></li>
+      <li><a href="#"><span class="glyphicon glyphicon-log-in"></span> SignUp</a></li>
+    </ul>
+</div>
+</nav>
+<div id="webcam_input"class="w3-red" style="width: 30%;border-radius: 20%;padding: 5px;position: absolute;left: 20%;">	
+<a href="#" onclick="slidein()" style="text-decoration: none">select webcam input</a>
+</div>	
+<div id="webcam" class=" w3-blue" style="display: none;border-radius: 10%;margin: 10px;">
+<center><div><h1>please keep your face close to the camera !! </h1></div></center>
+<center><div>
+	<canvas id="canvas" width="500" height="375" style="position: absolute;top: 5%;display: none;border-width: 10px;border-color: white;"></canvas>
+<video autoplay="true" id="videoElement" style="border: 5px;border-radius: 10%;" >
+   
+</video></div></center>
+
+<center><button onclick="detect()">click to search!!</button></center>
+<div style="padding-left: 20%"><div id= "uploading" style="display: none;">uploading.....</div>
+<div id="uploaded" style="display: none;">uploaded.</div>
+<div id="camFeedback"></div></div>
+<script type="text/javascript">
+function slidein(){
+	$("#webcam_input").hide();
+	$("#webcam").fadeIn(500);
+
+    load_cam();
+	
+}
+function load_cam(){
+var video = document.querySelector("#videoElement");
+ 
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
+ 
+if (navigator.getUserMedia) {       
+    navigator.getUserMedia({video: true}, handleVideo, videoError);
+}
+ 
+function handleVideo(stream) {
+	console.log('got');
+	console.log(stream);
+    window.stream=stream;
+    video.srcObject = stream;
+    video.onloadedmetadata = function(e) {
+           video.play();};
+}
+ 
+function videoError(e) {
+    console.log('no stream');// do something
+}
+}
+
+				
+	
+function detect() {
+	
+	var img=document.getElementById('videoElement');
+	var canvas=document.getElementById('canvas');
+    var context=canvas.getContext('2d');
+	var tracker = new tracking.LandmarksTracker();
+	tracker.setStepSize(2);
+	tracker.setInitialScale(4);
+    console.log(tracking.track('#videoElement',tracker));
+    tracker.on('track', function(event) {
+        event.data.faces.forEach(function(rect) {
+           console.log('face found');
+             
+             context.drawImage(img,170,200, rect.width, rect.height);
+             var track = stream.getTracks()[0];  
+             track.stop();
+             $("#canvas").fadeIn(500);
+             //saving and uploading....//
+             var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+             $("#uploading").show(); 
+              $.ajax({
+				type: "POST",
+				url: "pic_save.php",
+				data: { 
+					imgBase64: dataUrl
+				},
+				success: function(data){
+					console.log(data);
+					$('#camFeedback').html(data);
+				}
+			}).done(function(msg) {
+				console.log("saved");
+				$("#uploading").hide();
+				$("#uploaded").show();
+			});
+           console.log(rect);
+           window.plot(rect.x, rect.y, rect.width, rect.height);
+        });
+        
+      });
+	window.plot = function(x, y, w, h) {
+        var rect = document.createElement('div');
+        var rect1=document.getElementById('face_rect');
+        console.log(rect);
+        document.querySelector('#videoElement').removeChild(rect1);
+        console.log('div removed');
+        document.querySelector('#videoElement').appendChild(rect);
+        rect.id='face_rect';
+        rect.classList.add('rect');
+        rect.style.width = w + 'px';
+        rect.style.height = h + 'px';
+        rect.style.left = (img.offsetLeft + x) + 'px';
+        rect.style.top = (img.offsetTop + y) + 'px';
+
+      };
+};
+
+</script>
+</div>
+</body>
+</html>
